@@ -1,0 +1,30 @@
+{
+    "name": "rimba/asas",
+    "description": "Base package for use by all Bites and Rimba packages.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "BIT Ecosystem",
+            "email": "bit.ecosystem@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "laravel/framework": "^13.0"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Rimba\\Base\\BaseServiceProvider"
+            ]
+        }
+    },
+    "autoload": {
+        "psr-4": {
+           "Rimba\\Base\\": "src/"
+        }
+    },
+    "minimum-stability": "alpha",
+    "prefer-stable": true
+}
