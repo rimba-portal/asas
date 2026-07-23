@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Bites\Base\Console\Commands;
+namespace Rimba\Base\Console\Commands;
 
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;

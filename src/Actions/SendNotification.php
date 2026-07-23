@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Bites\Base\Actions;
+namespace Rimba\Base\Actions;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Log;

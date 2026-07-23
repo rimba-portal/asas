@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Bites\Base\Services;
+namespace Rimba\Base\Services;
 
 use BladeUI\Icons\Factory;
 use Illuminate\Support\ServiceProvider;

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Bites\Base\Console\Commands;
+namespace Rimba\Base\Console\Commands;
 
-use Bites\Base\Services\GetModelInfo;
+use Rimba\Base\Services\GetModelInfo;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
