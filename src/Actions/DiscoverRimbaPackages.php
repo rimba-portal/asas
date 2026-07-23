@@ -22,7 +22,7 @@ class DiscoverRimbaPackages
             $dir = base_path('vendor/rimba');
             $discovered = [];
 
-            if (!is_dir($dir)) {
+            if (! is_dir($dir)) {
                 return $discovered;
             }
 
@@ -30,12 +30,12 @@ class DiscoverRimbaPackages
 
             foreach ($iterator as $fileInfo) {
                 if ($fileInfo->isDir()) {
-                    $folderName = $fileInfo->getFilename(); 
-                    $packageKey = 'rimba/' . $folderName;   
+                    $folderName = $fileInfo->getFilename();
+                    $packageKey = 'rimba/'.$folderName;
 
                     // Convert folder name to StudlyCase (e.g., "blog-plugin" -> "BlogPlugin")
                     $studlyName = str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $folderName)));
-                    $namespace = 'Rimba\\' . $studlyName;  
+                    $namespace = 'Rimba\\'.$studlyName;
 
                     $discovered[$packageKey] = $namespace;
                 }

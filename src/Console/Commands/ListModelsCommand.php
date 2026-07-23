@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Rimba\Base\Console\Commands;
 
-use Rimba\Base\Services\GetModelInfo;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Rimba\Base\Services\GetModelInfo;
 
 #[Signature('bites:list-models')]
 #[Description('Command description')]
