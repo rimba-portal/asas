@@ -10,7 +10,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
 #[Description('Read and display all PHP files recursively and save them to quick.md')]
-#[Signature('bites:quick-md 
+#[Signature('rimba:quick-md 
                             {folder : The path to the folder} 
                             {--flat : Disable deep folder scanning (check top-level only)} 
                             {--s|search= : Optional keyword filter}')]

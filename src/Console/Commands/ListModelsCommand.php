@@ -9,7 +9,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Rimba\Base\Services\GetModelInfo;
 
-#[Signature('bites:list-models')]
+#[Signature('rimba:list-models')]
 #[Description('Command description')]
 class ListModelsCommand extends Command
 {

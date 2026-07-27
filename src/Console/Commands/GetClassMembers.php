@@ -14,7 +14,7 @@ use ReflectionNamedType;
 use ReflectionUnionType;
 
 #[Description('Inspect all PHP classes in app/ and packages/ and overwrite a compact classes.md file')]
-#[Signature('bites:class-members')]
+#[Signature('rimba:class-members')]
 class GetClassMembers extends Command
 {
     public function handle(): int

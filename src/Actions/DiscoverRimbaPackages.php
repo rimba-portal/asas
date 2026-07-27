@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Rimba\Base\Actions;
 
 use FilesystemIterator;
@@ -7,10 +9,10 @@ use Illuminate\Support\Facades\Cache;
 
 class DiscoverRimbaPackages
 {
-    protected string $cacheKey = 'rimba_discovered_packages';
+    protected string $cacheKey = 'rimba_packages';
 
     /**
-     * Scan the vendor/rimba folder and map package names to namespaces.
+     * Scan the vendor/rimba folder and return an array of folder names.
      */
     public function execute(bool $forceRefresh = false): array
     {
@@ -20,28 +22,21 @@ class DiscoverRimbaPackages
 
         return Cache::rememberForever($this->cacheKey, function () {
             $dir = base_path('vendor/rimba');
-            $discovered = [];
+            $folders = [];
 
             if (! is_dir($dir)) {
-                return $discovered;
+                return $folders;
             }
 
             $iterator = new FilesystemIterator($dir, FilesystemIterator::SKIP_DOTS);
 
             foreach ($iterator as $fileInfo) {
                 if ($fileInfo->isDir()) {
-                    $folderName = $fileInfo->getFilename();
-                    $packageKey = 'rimba/'.$folderName;
-
-                    // Convert folder name to StudlyCase (e.g., "blog-plugin" -> "BlogPlugin")
-                    $studlyName = str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $folderName)));
-                    $namespace = 'Rimba\\'.$studlyName;
-
-                    $discovered[$packageKey] = $namespace;
+                    $folders[] = $fileInfo->getFilename();
                 }
             }
 
-            return $discovered;
+            return $folders;
         });
     }
 }

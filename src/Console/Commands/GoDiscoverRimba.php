@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Rimba\Base\Console\Commands;
 
 use Illuminate\Console\Attributes\Description;
@@ -7,9 +9,9 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Rimba\Base\Actions\DiscoverRimbaPackages;
 
-#[Signature('bites:discover-rimba')]
+#[Signature('rimba:discover-rimba')]
 #[Description('Clear and instantly rebuild the Rimba package discovery cache')]
-class RecacheRimbaPackagesCommand extends Command
+class GoDiscoverRimba extends Command
 {
     /**
      * Execute the console command.

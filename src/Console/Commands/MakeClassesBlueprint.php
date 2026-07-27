@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\File;
 use SplFileInfo;
 
 #[Description('Generate compact PHP class blueprint for AI / Copilot context')]
-#[Signature('bites:blue-print')]
+#[Signature('rimba:blue-print')]
 class MakeClassesBlueprint extends Command
 {
     protected array $targetFolders = [
