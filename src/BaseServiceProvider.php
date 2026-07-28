@@ -11,7 +11,6 @@ use ReflectionClass;
 
 class BaseServiceProvider extends BitesServiceProvider
 {
-    protected string $configFile = __DIR__ . '/../config/bites.php';
 
     protected function bootPackage(): void
     {
