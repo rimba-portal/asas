@@ -4,7 +4,6 @@ namespace Rimba\Base\Support;
 
 // Usage :
 //      Env::set('RIMBA_APP', 'Rimba');
-
 //      $value = Env::get('RIMBA_APP');
 class Env
 {
