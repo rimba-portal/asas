@@ -58,12 +58,12 @@ class QuickMdPkg extends Command
                 $markdown .= "\n```\n\n";
             }
 
-            $outputFile = $rootPath.DIRECTORY_SEPARATOR.$folderName.'_quick.md';
+            $outputFile = $rootPath.DIRECTORY_SEPARATOR.'quick_'.$folderName.'.md';
 
             File::put($outputFile, $markdown);
 
             $this->comment(
-                sprintf('Saved %d files to %s_quick.md', $count, $folderName)
+                sprintf('Saved %d files to quick_%s.md', $count, $folderName)
             );
         }
 
