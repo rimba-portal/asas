@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Rimba\Base\Support;
 
-use Rimba\Base\Services\GetModelInfo;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
+use Rimba\Base\Services\GetModelInfo;
 
 class JsonSeedThruModel extends Seeder
 {
@@ -21,7 +21,7 @@ class JsonSeedThruModel extends Seeder
         $directoryPath = database_path('seeds');
 
         if (! File::exists($directoryPath)) {
-            $this->command?->error("Directory not found at: {$directoryPath}");
+            $this->command?->error('Directory not found at: '.$directoryPath);
 
             return;
         }
@@ -35,7 +35,7 @@ class JsonSeedThruModel extends Seeder
             $jsonMap = json_decode($jsonContent, true);
 
             if (empty($jsonMap) || ! is_array($jsonMap)) {
-                $this->command?->warn("Skipping file: '{$file->getFilename()}'. JSON is empty or invalid.");
+                $this->command?->warn(sprintf("Skipping file: '%s'. JSON is empty or invalid.", $file->getFilename()));
 
                 continue;
             }
@@ -45,7 +45,7 @@ class JsonSeedThruModel extends Seeder
 
                 if (! Schema::hasTable($tableName)) {
                     $this->command?->warn(
-                        "Skipping table '{$tableName}'. Table does not exist."
+                        sprintf("Skipping table '%s'. Table does not exist.", $tableName)
                     );
 
                     continue;
@@ -55,7 +55,7 @@ class JsonSeedThruModel extends Seeder
 
                 if (! $modelClass) {
                     $this->command?->warn(
-                        "Skipping table '{$tableName}'. No model found."
+                        sprintf("Skipping table '%s'. No model found.", $tableName)
                     );
 
                     continue;
@@ -66,7 +66,7 @@ class JsonSeedThruModel extends Seeder
                 }
 
                 $this->command?->info(
-                    "Model seeding table '{$tableName}' using {$modelClass}..."
+                    sprintf("Model seeding table '%s' using %s...", $tableName, $modelClass)
                 );
 
                 foreach ($data as $row) {

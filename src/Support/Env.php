@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Rimba\Base\Support;
 
 // Usage :
@@ -22,16 +24,16 @@ class Env
 
         $content = file_get_contents($path);
 
-        $pattern = "/^{$key}=.*/m";
+        $pattern = sprintf('/^%s=.*/m', $key);
 
         if (preg_match($pattern, $content)) {
             $content = preg_replace(
                 $pattern,
-                $key . '="' . addslashes($value) . '"',
+                $key.'="'.addslashes($value).'"',
                 $content
             );
         } else {
-            $content .= PHP_EOL . $key . '="' . addslashes($value) . '"';
+            $content .= PHP_EOL.$key.'="'.addslashes($value).'"';
         }
 
         file_put_contents($path, $content);
