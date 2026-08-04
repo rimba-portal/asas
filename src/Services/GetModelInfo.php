@@ -69,7 +69,7 @@ class GetModelInfo
             app_path(),
 
             // Local package development path.
-            base_path('packages'),
+            base_path('rimba'),
 
             // Installed package paths that you care about.
             base_path('vendor/bit-es'),
