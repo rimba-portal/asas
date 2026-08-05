@@ -48,7 +48,7 @@ class QuickMdPkg extends Command
                     continue;
                 }
 
-                $count++;
+                ++$count;
 
                 $contents = File::get($file->getRealPath());
 

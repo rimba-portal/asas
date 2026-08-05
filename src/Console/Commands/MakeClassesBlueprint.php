@@ -72,7 +72,7 @@ class MakeClassesBlueprint extends Command
                 $content .= $blueprint;
                 $content .= "\n---\n\n";
 
-                $fileCount++;
+                ++$fileCount;
             }
         }
 
@@ -196,7 +196,7 @@ class MakeClassesBlueprint extends Command
         $lines = explode("\n", $source);
         $count = count($lines);
 
-        for ($i = 0; $i < $count; $i++) {
+        for ($i = 0; $i < $count; ++$i) {
             $line = trim($lines[$i]);
 
             if ($line === '') {
@@ -223,7 +223,7 @@ class MakeClassesBlueprint extends Command
                 && ! str_ends_with(trim($declaration), ';')
                 && $i + 1 < $count
             ) {
-                $i++;
+                ++$i;
                 $declaration .= ' '.trim($lines[$i]);
             }
 
@@ -291,11 +291,11 @@ class MakeClassesBlueprint extends Command
             $braceCount = 0;
             $bodyStart = $startPos + 1;
 
-            for ($i = $startPos; $i < $length; $i++) {
+            for ($i = $startPos; $i < $length; ++$i) {
                 if ($source[$i] === '{') {
-                    $braceCount++;
+                    ++$braceCount;
                 } elseif ($source[$i] === '}') {
-                    $braceCount--;
+                    --$braceCount;
                     if ($braceCount === 0) {
                         return substr($source, $bodyStart, $i - $bodyStart);
                     }
