@@ -54,7 +54,7 @@ class GetClassMembers extends Command
                 }
 
                 $markdownContent .= $this->generateClassMarkdown($className);
-                ++$classCount;
+                $classCount++;
             }
         }
 

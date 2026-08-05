@@ -32,7 +32,7 @@ class GenerateUniqueCode
 
         // 4. Shrink the number down to the desired character length
         $code = '';
-        for ($i = 0; $i < $length; ++$i) {
+        for ($i = 0; $i < $length; $i++) {
             $remainder = $number % $base;
             $code .= $alphabet[$remainder];
             $number = intdiv($number, $base);
@@ -48,14 +48,14 @@ class GenerateUniqueCode
             $number = hexdec($hexSegment);
 
             $code = '';
-            for ($i = 0; $i < $length; ++$i) {
+            for ($i = 0; $i < $length; $i++) {
                 $remainder = $number % $base;
                 $code .= $alphabet[$remainder];
                 $number = intdiv($number, $base);
             }
 
             $finalCode = strrev($code);
-            ++$counter;
+            $counter++;
         }
 
         return $finalCode;
