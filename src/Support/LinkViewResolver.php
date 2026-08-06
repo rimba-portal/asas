@@ -17,14 +17,12 @@ final class LinkViewResolver
     ): Table {
         return $table
             ->recordUrl(
-                fn (Model $record)
-                    => Str::startsWith($record->{$pathColumn}, ['http://', 'https://'])
+                fn (Model $record) => Str::startsWith($record->{$pathColumn}, ['http://', 'https://'])
                         ? $record->{$pathColumn}
                         : $resourceClass::getUrl('view', ['record' => $record])
             )
             ->openRecordUrlInNewTab(
-                fn (Model $record)
-                    => Str::startsWith($record->{$pathColumn}, ['http://', 'https://'])
+                fn (Model $record) => Str::startsWith($record->{$pathColumn}, ['http://', 'https://'])
             );
     }
 }
