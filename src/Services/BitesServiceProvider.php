@@ -6,54 +6,37 @@ namespace Rimba\Base\Services;
 
 use BladeUI\Icons\Factory;
 use Illuminate\Support\ServiceProvider;
+use ReflectionClass;
 
 abstract class BitesServiceProvider extends ServiceProvider
 {
     /**
      * Package config file.
-     *
-     * Example:
-     * __DIR__ . '/../config/attributing.php'
      */
     protected string $configFile = __DIR__.'/../config/bites.php';
 
     /**
      * Package views path.
-     *
-     * Example:
-     * __DIR__ . '/../resources/views'
      */
     protected string $viewsPath = __DIR__.'/../resources/views';
 
     /**
      * Package icons path.
-     *
-     * Example:
-     * __DIR__ . '/../resources/svg'
      */
     protected string $iconsPath = __DIR__.'/../resources/svg';
 
     /**
      * Shared config key.
-     *
-     * All package configs will merge into:
-     * config('bites')
      */
     protected string $configName = 'bites';
 
     /**
      * Shared view namespace.
-     *
-     * All package views are loaded as:
-     * view('bites::...')
      */
     protected string $viewNamespace = 'bites';
 
     /**
      * Shared Blade icon set name.
-     *
-     * All package icons are used as:
-     * <x-bites-... />
      */
     protected string $iconSet = 'bites';
 
@@ -75,6 +58,7 @@ abstract class BitesServiceProvider extends ServiceProvider
     {
         $this->registerViews();
         $this->registerIcons();
+        $this->registerHelpFiles(); // <-- Hook added here
 
         $this->bootPackage();
     }
@@ -93,6 +77,32 @@ abstract class BitesServiceProvider extends ServiceProvider
     protected function bootPackage(): void
     {
         //
+    }
+
+    /**
+     * Automatically register help files for publishing if the directory exists.
+     */
+    protected function registerHelpFiles(): void
+    {
+        if (! $this->app->runningInConsole()) {
+            return;
+        }
+
+        // Get the directory of the actual child class, not this abstract class
+        $childDir = dirname((new ReflectionClass($this))->getFileName());
+        $helpPath = $childDir.'/../help';
+
+        if (! is_dir($helpPath)) {
+            return;
+        }
+
+        // Publishes package/help/* content directly into public/helpfiles/
+        // Uses the child class's base name as a tag modifier for granular control
+        $tagName = 'bites-help-'.strtolower((new ReflectionClass($this))->getShortName());
+
+        $this->publishes([
+            $helpPath => public_path('helpfiles'),
+        ], ['bites-helpfiles', $tagName]);
     }
 
     protected function registerConfig(): void
