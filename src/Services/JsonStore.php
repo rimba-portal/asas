@@ -42,6 +42,14 @@ class JsonStore
         );
     }
 
+    public function find(string $key): ?array
+    {
+        return collect($this->all())
+            ->first(
+                fn ($record): bool => ($record['key'] ?? null) === $key
+            );
+    }
+
     public function all(): array
     {
         $this->ensureExists();
@@ -59,7 +67,7 @@ class JsonStore
             json_encode(
                 array_values($records),
                 JSON_PRETTY_PRINT |
-                JSON_UNESCAPED_SLASHES
+                    JSON_UNESCAPED_SLASHES
             )
         );
     }
@@ -76,7 +84,8 @@ class JsonStore
     public function update(string $key, array $data): void
     {
         $records = collect($this->all())
-            ->map(fn ($record) => ($record['key'] ?? null) === $key
+            ->map(
+                fn ($record) => ($record['key'] ?? null) === $key
                     ? array_merge($record, $data)
                     : $record
             )
@@ -89,7 +98,8 @@ class JsonStore
     public function delete(string $key): void
     {
         $records = collect($this->all())
-            ->reject(fn ($record): bool => ($record['key'] ?? null) === $key
+            ->reject(
+                fn ($record): bool => ($record['key'] ?? null) === $key
             )
             ->values()
             ->all();
