@@ -8,7 +8,7 @@ class JsonStore
 {
     public function __construct(
         protected string $store,
-        protected ?string $source = null,
+        protected string $source,
     ) {}
 
     public function path(): string
@@ -30,10 +30,7 @@ class JsonStore
             mkdir(dirname($target), 0755, true);
         }
 
-        if (
-            $this->source &&
-            file_exists($this->source)
-        ) {
+        if (file_exists($this->source)) {
             copy($this->source, $target);
 
             return;
@@ -76,24 +73,24 @@ class JsonStore
         $this->save($records);
     }
 
-    public function update(string $name, array $data): void
+    public function update(string $key, array $data): void
     {
         $records = collect($this->all())
-            ->map(fn (array $record): array => ($record['name'] ?? null) === $name
+            ->map(fn ($record) => ($record['key'] ?? null) === $key
                     ? array_merge($record, $data)
-                    : $record)
-
+                    : $record
+            )
             ->values()
             ->all();
 
         $this->save($records);
     }
 
-    public function delete(string $name): void
+    public function delete(string $key): void
     {
         $records = collect($this->all())
-            ->reject(fn (array $record): bool => ($record['name'] ?? null) === $name)
-
+            ->reject(fn ($record): bool => ($record['key'] ?? null) === $key
+            )
             ->values()
             ->all();
 

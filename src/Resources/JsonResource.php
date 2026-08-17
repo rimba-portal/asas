@@ -9,7 +9,6 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Rimba\Base\Resources\Pages\ManageJsonRecords;
 use Rimba\Base\Services\JsonStore;
 use Rimba\Foundation\FoundationServiceProvider;
 
@@ -29,40 +28,34 @@ abstract class JsonResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextInput::make('name')
-                    ->required(),
+        return $schema->components([
+            TextInput::make('key')
+                ->required(),
 
-                TextInput::make('description'),
+            TextInput::make('name')
+                ->required(),
 
-                TextInput::make('url')
-                    ->required(),
-            ]);
+            TextInput::make('description'),
+
+            TextInput::make('url')
+                ->required(),
+        ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
             ->recordUrl(
-                fn (array $record) => $record['url']
+                fn ($record) => $record['url']
             )
             ->columns([
                 TextColumn::make('name')
                     ->searchable(),
 
-                TextColumn::make('description')
-                    ->wrap(),
+                TextColumn::make('description'),
 
                 TextColumn::make('url')
                     ->copyable(),
             ]);
-    }
-
-    public static function getPages(): array
-    {
-        return [
-            'index' => ManageJsonRecords::route('/'),
-        ];
     }
 }
