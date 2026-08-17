@@ -10,11 +10,16 @@ use Rimba\Base\Services\BitesServiceProvider;
 
 class BaseServiceProvider extends BitesServiceProvider
 {
+    protected string $configFile = __DIR__.'/../config/bites.php';
+
+    protected string $viewsPath = __DIR__.'/../resources/views';
+
     protected function bootPackage(): void
     {
         if ($this->app->runningInConsole()) {
             $this->registerCommandsFromDirectory();
         }
+
     }
 
     protected function registerPackage(): void
