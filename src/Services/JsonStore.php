@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Rimba\Base\Services;
 
+use Illuminate\Support\Facades\Storage;
 use JsonException;
 use RuntimeException;
 
@@ -14,24 +15,25 @@ class JsonStore
         protected string $source,
     ) {}
 
-    public function path(): string
+    protected function disk(): string
     {
-        return storage_path(
-            "private/{$this->store}.json"
-        );
+        return config('bites.json_disk', 'local');
+    }
+
+    protected function filename(): string
+    {
+        return "{$this->store}.json";
     }
 
     public function all(): array
     {
         $this->ensureExists();
 
-        $contents = file_get_contents($this->path());
-
-        if ($contents === false) {
-            throw new RuntimeException(
-                "Unable to read JSON store [{$this->store}]."
-            );
-        }
+        $contents = Storage::disk(
+            $this->disk()
+        )->get(
+            $this->filename()
+        );
 
         if (trim($contents) === '') {
             return [];
@@ -45,7 +47,7 @@ class JsonStore
                 JSON_THROW_ON_ERROR,
             );
         } catch (JsonException $jsonException) {
-            throw new RuntimeException("Invalid JSON in store [{$this->store}]: {$jsonException->getMessage()}", $jsonException->getCode(), previous: $jsonException);
+            throw new RuntimeException("Invalid JSON store [{$this->store}]: {$jsonException->getMessage()}", $jsonException->getCode(), previous: $jsonException);
         }
 
         if (! is_array($records)) {
@@ -84,14 +86,18 @@ class JsonStore
         }
 
         $records = $this->all();
+
         $records[] = $record;
 
         $this->save($records);
     }
 
-    public function update(string $key, array $data): void
-    {
+    public function update(
+        string $key,
+        array $data,
+    ): void {
         $records = $this->all();
+
         $updated = false;
 
         foreach ($records as &$record) {
@@ -99,7 +105,11 @@ class JsonStore
                 continue;
             }
 
-            $record = array_merge($record, $data);
+            $record = array_merge(
+                $record,
+                $data,
+            );
+
             $updated = true;
 
             break;
@@ -156,64 +166,58 @@ class JsonStore
             throw new RuntimeException("Unable to encode JSON store [{$this->store}]: {$jsonException->getMessage()}", $jsonException->getCode(), previous: $jsonException);
         }
 
-        $written = file_put_contents(
-            $this->path(),
+        Storage::disk(
+            $this->disk()
+        )->put(
+            $this->filename(),
             $contents.PHP_EOL,
-            LOCK_EX,
         );
-
-        if ($written === false) {
-            throw new RuntimeException(
-                "Unable to write JSON store [{$this->store}]."
-            );
-        }
     }
 
     protected function ensureExists(): void
     {
-        $target = $this->path();
-        $directory = dirname($target);
+        $disk = Storage::disk(
+            $this->disk()
+        );
 
-        if (is_file($target)) {
+        if ($disk->exists(
+            $this->filename()
+        )) {
             return;
-        }
-
-        if (
-            ! is_dir($directory)
-            && ! mkdir($directory, 0755, true)
-            && ! is_dir($directory)
-        ) {
-            throw new RuntimeException(
-                "Unable to create JSON storage directory [{$directory}]."
-            );
         }
 
         if (is_file($this->source)) {
-            if (! copy($this->source, $target)) {
+
+            $contents = file_get_contents(
+                $this->source
+            );
+
+            if ($contents === false) {
                 throw new RuntimeException(
-                    "Unable to copy default JSON store from [{$this->source}]."
+                    "Unable to read default JSON store [{$this->source}]."
                 );
             }
+
+            $disk->put(
+                $this->filename(),
+                $contents,
+            );
 
             return;
         }
 
-        $written = file_put_contents(
-            $target,
+        $disk->put(
+            $this->filename(),
             '[]'.PHP_EOL,
-            LOCK_EX,
         );
-
-        if ($written === false) {
-            throw new RuntimeException(
-                "Unable to create JSON store [{$target}]."
-            );
-        }
     }
 
-    protected function extractKey(array $record): string
-    {
-        $key = trim((string) ($record['key'] ?? ''));
+    protected function extractKey(
+        array $record,
+    ): string {
+        $key = trim(
+            (string) ($record['key'] ?? '')
+        );
 
         if ($key === '') {
             throw new RuntimeException(
