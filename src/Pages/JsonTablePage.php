@@ -42,9 +42,6 @@ abstract class JsonTablePage extends Page implements HasTable
             ->records(
                 fn (): array => static::repository()->all()
             )
-            ->recordKey(
-                fn (array $record): string => $record['key']
-            )
             ->recordUrl(
                 fn (array $record): ?string => filled($record['url'] ?? null)
                         ? $record['url']
