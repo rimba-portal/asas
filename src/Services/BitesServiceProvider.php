@@ -58,7 +58,7 @@ abstract class BitesServiceProvider extends ServiceProvider
     {
         $this->registerViews();
         $this->registerIcons();
-        $this->registerHelpFiles(); // <-- Hook added here
+        $this->registerHelpFiles();
 
         $this->bootPackage();
     }

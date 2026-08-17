@@ -15,7 +15,6 @@ class BaseServiceProvider extends BitesServiceProvider
         if ($this->app->runningInConsole()) {
             $this->registerCommandsFromDirectory();
         }
-
     }
 
     protected function registerPackage(): void
