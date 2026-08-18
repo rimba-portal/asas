@@ -38,7 +38,7 @@ class QuickMdPkg extends Command
             $files = File::allFiles($directory);
 
             $markdown = "# {$folderName}\n\n";
-            $markdown .= '*Generated: '.now()->toDateTimeString()."*\n\n";
+            $markdown .= '*Generated: '.now()->toDateTimeString().'* '.config('app.timezone')."\n\n";
 
             $count = 0;
 
