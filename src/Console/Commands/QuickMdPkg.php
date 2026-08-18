@@ -29,7 +29,7 @@ class QuickMdPkg extends Command
         }
 
         $directories = File::directories($rootPath);
-
+        dd(config('app.timezone'));
         foreach ($directories as $directory) {
             $folderName = basename($directory);
 
