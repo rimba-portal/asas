@@ -1,0 +1,46 @@
+name: Auto Tag and Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'VERSION' # Triggers only when your PowerShell script changes the VERSION file
+
+permissions:
+  contents: write # Grants the workflow permission to create tags and releases
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Read Current Version
+        id: get_version
+        run: |
+          VERSION=$(cat VERSION | tr -d '\r\n ')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "tag=v$VERSION" >> $GITHUB_ENV
+
+      - name: Check if Tag Already Exists
+        id: check_tag
+        run: |
+          git fetch --tags
+          if git rev-parse "${{ env.tag }}" >/dev/null 2>&1; then
+            echo "TAG_EXISTS=true" >> $GITHUB_ENV
+            echo "Tag ${{ env.tag }} already exists. Skipping release."
+          else
+            echo "TAG_EXISTS=false" >> $GITHUB_ENV
+          fi
+
+      - name: Create Git Tag and GitHub Release
+        if: env.TAG_EXISTS == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.tag }}
+          name: Release v${{ env.VERSION }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
