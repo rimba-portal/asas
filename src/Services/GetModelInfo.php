@@ -65,16 +65,11 @@ class GetModelInfo
      */
     protected static function scanDirectories(): array
     {
-        return array_values(array_filter([
-            app_path(),
-
-            // Local package development path.
-            base_path('rimba'),
-
-            // Installed package paths that you care about.
-            base_path('vendor/bit-es'),
-            base_path('vendor/rimba'),
-        ], static fn (string $directory): bool => is_dir($directory)));
+        return collect(config('bites.model_scan_paths', []))
+            ->filter(fn ($directory): bool => is_string($directory) && is_dir($directory))
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**
