@@ -17,6 +17,7 @@ class MakeClassesBlueprint extends Command
     protected array $targetFolders = [
         'app',
         'packages',
+        'rimba',
     ];
 
     protected string $outputFile = 'classes.md';
