@@ -49,7 +49,6 @@ class JsonSeedThruModel extends Seeder
                 continue;
             }
 
-            $this->command?->warn("Doing: {$file->getFilename()}");
             $json = json_decode(
                 File::get($file->getRealPath()),
                 true
@@ -105,6 +104,7 @@ class JsonSeedThruModel extends Seeder
                 $beforeTotal = $this->totalCount;
                 $beforeCreated = $this->createdCount;
                 $beforeUpdated = $this->updatedCount;
+                $beforeSkipped = $this->skippedCount;
 
                 foreach ($rows as $row) {
 
@@ -114,11 +114,14 @@ class JsonSeedThruModel extends Seeder
                     );
                 }
 
-                $this->command?->info(sprintf(
-                    'Rows=%d Created=%d Updated=%d',
+                // $this->command?->warn("Done: {$file->getFilename()}");
+                $this->command?->warn(sprintf(
+                    'Done: %d -> Rows=%d Created=%d Updated=%d Skipped=%d',
+                    $file->getFilename(),
                     $this->totalCount - $beforeTotal,
                     $this->createdCount - $beforeCreated,
                     $this->updatedCount - $beforeUpdated,
+                    $this->skippedCount - $beforeSkipped,
                 ));
             }
         }
