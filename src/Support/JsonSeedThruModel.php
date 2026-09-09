@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Rimba\Base\Support;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\File;
@@ -13,113 +16,222 @@ use Rimba\Base\Services\GetModelInfo;
 
 class JsonSeedThruModel extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
+    public function __construct(
+        protected ?string $directoryPath = null,
+    ) {}
+
     public function run(): void
     {
-        $directoryPath = database_path('seeds');
+        $directoryPath = $this->directoryPath
+            ?? database_path('seeds');
 
         if (! File::exists($directoryPath)) {
-            $this->command?->error('Directory not found at: '.$directoryPath);
+            $this->command?->error(
+                "Directory not found: {$directoryPath}"
+            );
 
             return;
         }
 
         foreach (File::files($directoryPath) as $file) {
+
             if ($file->getExtension() !== 'json') {
                 continue;
             }
 
-            $jsonContent = File::get($file->getRealPath());
-            $jsonMap = json_decode($jsonContent, true);
+            $this->command?->warn("Doing: {$file->getFilename()}");
+            $json = json_decode(
+                File::get($file->getRealPath()),
+                true
+            );
 
-            if (empty($jsonMap) || ! is_array($jsonMap)) {
-                $this->command?->warn(sprintf("Skipping file: '%s'. JSON is empty or invalid.", $file->getFilename()));
+            if (
+                empty($json) ||
+                ! is_array($json)
+            ) {
+                $this->command?->warn(
+                    "Invalid JSON: {$file->getFilename()}"
+                );
 
                 continue;
             }
 
-            // Extract the table name from the 1st layer key
-            foreach ($jsonMap as $tableName => $data) {
+            foreach ($json as $tableName => $rows) {
 
                 if (! Schema::hasTable($tableName)) {
+
                     $this->command?->warn(
-                        sprintf("Skipping table '%s'. Table does not exist.", $tableName)
+                        "Skipping table '{$tableName}' - table not found."
                     );
 
                     continue;
                 }
 
-                $modelClass = GetModelInfo::findByTable($tableName);
+                $modelClass = GetModelInfo::findByTable(
+                    $tableName
+                );
 
                 if (! $modelClass) {
+
                     $this->command?->warn(
-                        sprintf("Skipping table '%s'. No model found.", $tableName)
+                        "Skipping table '{$tableName}' - model not found."
                     );
 
                     continue;
                 }
 
-                if (! $this->isList($data)) {
-                    $data = [$data];
+                if (! $this->isList($rows)) {
+                    $rows = [$rows];
                 }
 
                 $this->command?->info(
-                    sprintf("Model seeding table '%s' using %s...", $tableName, $modelClass)
+                    sprintf(
+                        "Model seeding table '%s' using %s...",
+                        $tableName,
+                        $modelClass
+                    )
                 );
 
-                foreach ($data as $row) {
-                    $this->seedRow($modelClass, $row);
+                foreach ($rows as $row) {
+                    $this->seedRow(
+                        $modelClass,
+                        $row
+                    );
                 }
             }
         }
 
-        $this->command?->info('Model JSON directory seeding completed successfully!');
+        $this->command?->info(
+            'JSON seeding completed successfully.'
+        );
     }
 
     /**
      * @param  class-string<Model>  $modelClass
      */
-    protected function seedRow(string $modelClass, array $row): Model
-    {
+    protected function seedRow(
+        string $modelClass,
+        array $row
+    ): Model {
+
         /** @var Model $model */
         $model = new $modelClass;
 
-        [$attributes, $relations] = $this->splitAttributesAndRelations($model, $row);
+        [
+            $attributes,
+            $relations,
+        ] = $this->splitAttributesAndRelations(
+            $model,
+            $row
+        );
 
-        $attributes = $this->resolveSeedMappings($model, $attributes);
+        $attributes = $this->resolveSeedMappings(
+            $model,
+            $attributes
+        );
 
-        $uniqueBy = $this->guessUniqueBy($attributes);
+        $uniqueBy = $this->guessUniqueBy(
+            $model
+        );
 
-        if ($uniqueBy === []) {
-            /** @var Model $record */
-            $record = $modelClass::query()->create($attributes);
-        } else {
-            /** @var Model $record */
-            $record = $modelClass::query()->updateOrCreate(
+        /** @var Model $record */
+        $record = $uniqueBy === []
+            ? $modelClass::query()->create(
+                $attributes
+            )
+            : $modelClass::query()->updateOrCreate(
                 $uniqueBy,
                 $attributes
             );
-        }
 
         foreach ($relations as $relationName => $items) {
-            $this->seedRelation($record, $relationName, $items);
+
+            $this->seedRelation(
+                $record,
+                $relationName,
+                $items
+            );
         }
 
         return $record;
     }
 
-    protected function splitAttributesAndRelations(Model $model, array $row): array
-    {
+    protected function seedRelation(
+        Model $parent,
+        string $relationName,
+        array $items
+    ): void {
+
+        if (! $this->isList($items)) {
+            $items = [$items];
+        }
+
+        $relation = $parent->{$relationName}();
+
+        $relatedModel = $relation->getRelated();
+
+        foreach ($items as $item) {
+
+            if (! is_array($item)) {
+                continue;
+            }
+
+            [
+                $attributes,
+                $nestedRelations,
+            ] = $this->splitAttributesAndRelations(
+                $relatedModel,
+                $item
+            );
+
+            /*
+             |--------------------------------------------------------------------------
+             | HasOne / HasMany
+             |--------------------------------------------------------------------------
+             */
+            if (
+                $relation instanceof HasOne ||
+                $relation instanceof HasMany
+            ) {
+                $attributes[$relation->getForeignKeyName()] = $parent->getKey();
+            }
+
+            $record = $this->seedRow(
+                get_class($relatedModel),
+                array_merge(
+                    $attributes,
+                    $nestedRelations
+                )
+            );
+
+            /*
+             |--------------------------------------------------------------------------
+             | BelongsToMany
+             |--------------------------------------------------------------------------
+             */
+            if ($relation instanceof BelongsToMany) {
+
+                $relation->syncWithoutDetaching([
+                    $record->getKey(),
+                ]);
+            }
+        }
+    }
+
+    protected function splitAttributesAndRelations(
+        Model $model,
+        array $row
+    ): array {
+
         $attributes = [];
         $relations = [];
 
         foreach ($row as $key => $value) {
+
             if (
-                is_array($value)
-                && method_exists($model, $key)
-                && $this->isRelation($model, $key)
+                is_array($value) &&
+                method_exists($model, $key) &&
+                $this->isRelation($model, $key)
             ) {
                 $relations[$key] = $value;
 
@@ -129,67 +241,75 @@ class JsonSeedThruModel extends Seeder
             $attributes[$key] = $value;
         }
 
-        return [$attributes, $relations];
+        return [
+            $attributes,
+            $relations,
+        ];
     }
 
-    protected function isRelation(Model $model, string $method): bool
-    {
+    protected function isRelation(
+        Model $model,
+        string $method
+    ): bool {
+
         try {
-            return $model->{$method}() instanceof Relation;
+            return $model->{$method}()
+                instanceof Relation;
         } catch (\Throwable) {
             return false;
         }
     }
 
-    protected function seedRelation(Model $parent, string $relationName, array $items): void
-    {
-        if (! $this->isList($items)) {
-            $items = [$items];
-        }
+    protected function guessUniqueBy(
+        Model $model,
+        array $attributes
+    ): array {
 
-        foreach ($items as $item) {
-            if (! is_array($item)) {
+        $table = $model->getTable();
+
+        foreach (
+            Schema::getIndexes($table) as $index
+        ) {
+
+            if ($index['primary'] ?? false) {
                 continue;
             }
 
-            $uniqueBy = $this->guessUniqueBy($item);
-
-            if ($uniqueBy === []) {
-                $parent->{$relationName}()->create($item);
-
+            if (! ($index['unique'] ?? false)) {
                 continue;
             }
 
-            $parent->{$relationName}()->updateOrCreate(
-                $uniqueBy,
-                $item
-            );
-        }
-    }
+            $columns = $index['columns'] ?? [];
 
-    protected function guessUniqueBy(array $attributes): array
-    {
-        foreach (['key', 'code', 'slug', 'value', 'name'] as $column) {
-            if (array_key_exists($column, $attributes)) {
-                return [
-                    $column => $attributes[$column],
-                ];
+            if (
+                empty(array_diff(
+                    $columns,
+                    array_keys($attributes)
+                ))
+            ) {
+
+                return collect($columns)
+                    ->mapWithKeys(
+                        fn ($column): array => [
+                            $column => $attributes[$column],
+                        ]
+                    )
+                    ->all();
             }
         }
 
         return [];
     }
 
-    protected function isList(array $array): bool
-    {
-        return array_keys($array) === range(0, count($array) - 1);
-    }
-
     protected function resolveSeedMappings(
         Model $model,
         array $attributes
     ): array {
-        if (! method_exists($model, 'seedMappings')) {
+
+        if (! method_exists(
+            $model,
+            'seedMappings'
+        )) {
             return $attributes;
         }
 
@@ -197,7 +317,12 @@ class JsonSeedThruModel extends Seeder
 
         foreach ($mappings as $key => $resolver) {
 
-            if (! array_key_exists($key, $attributes)) {
+            if (
+                ! array_key_exists(
+                    $key,
+                    $attributes
+                )
+            ) {
                 continue;
             }
 
@@ -212,5 +337,16 @@ class JsonSeedThruModel extends Seeder
         }
 
         return $attributes;
+    }
+
+    protected function isList(
+        array $array
+    ): bool {
+
+        return array_keys($array)
+            === range(
+                0,
+                count($array) - 1
+            );
     }
 }
