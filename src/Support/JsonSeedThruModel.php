@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\File;
@@ -16,6 +18,14 @@ use Rimba\Base\Services\GetModelInfo;
 
 class JsonSeedThruModel extends Seeder
 {
+    protected int $totalCount = 0;
+
+    protected int $createdCount = 0;
+
+    protected int $updatedCount = 0;
+
+    protected int $skippedCount = 0;
+
     public function __construct(
         protected ?string $directoryPath = null,
     ) {}
@@ -92,12 +102,24 @@ class JsonSeedThruModel extends Seeder
                     )
                 );
 
+                $beforeTotal = $this->totalCount;
+                $beforeCreated = $this->createdCount;
+                $beforeUpdated = $this->updatedCount;
+
                 foreach ($rows as $row) {
+
                     $this->seedRow(
                         $modelClass,
                         $row
                     );
                 }
+
+                $this->command?->info(sprintf(
+                    'Rows=%d Created=%d Updated=%d',
+                    $this->totalCount - $beforeTotal,
+                    $this->createdCount - $beforeCreated,
+                    $this->updatedCount - $beforeUpdated,
+                ));
             }
         }
 
@@ -134,15 +156,67 @@ class JsonSeedThruModel extends Seeder
             $model
         );
 
-        /** @var Model $record */
-        $record = $uniqueBy === []
-            ? $modelClass::query()->create(
-                $attributes
-            )
-            : $modelClass::query()->updateOrCreate(
-                $uniqueBy,
+        /*
+    |--------------------------------------------------------------------------
+    | Create if no unique key found
+    |--------------------------------------------------------------------------
+    */
+        if ($uniqueBy === []) {
+
+            $record = $modelClass::query()->create(
                 $attributes
             );
+
+            $this->createdCount++;
+            $this->totalCount++;
+        } else {
+
+            /*
+        |--------------------------------------------------------------------------
+        | Find existing
+        |--------------------------------------------------------------------------
+        */
+            $record = $modelClass::query()
+                ->where($uniqueBy)
+                ->first();
+
+            /*
+        |--------------------------------------------------------------------------
+        | Create
+        |--------------------------------------------------------------------------
+        */
+            if (! $record) {
+
+                $record = $modelClass::query()->create(
+                    $attributes
+                );
+
+                $this->createdCount++;
+            }
+
+            /*
+        |--------------------------------------------------------------------------
+        | Update only if changed
+        |--------------------------------------------------------------------------
+        */ else {
+
+                $record->fill(
+                    $attributes
+                );
+
+                if ($record->isDirty()) {
+
+                    $record->save();
+
+                    $this->updatedCount++;
+                } else {
+
+                    $this->skippedCount++;
+                }
+            }
+
+            $this->totalCount++;
+        }
 
         foreach ($relations as $relationName => $items) {
 
@@ -185,15 +259,37 @@ class JsonSeedThruModel extends Seeder
             );
 
             /*
-             |--------------------------------------------------------------------------
-             | HasOne / HasMany
-             |--------------------------------------------------------------------------
-             */
-            if (
-                $relation instanceof HasOne ||
-                $relation instanceof HasMany
-            ) {
-                $attributes[$relation->getForeignKeyName()] = $parent->getKey();
+        |--------------------------------------------------------------------------
+        | Inject Relationship Keys
+        |--------------------------------------------------------------------------
+        */
+            switch (true) {
+
+                /*
+            |--------------------------------------------------------------------------
+            | HasOne / HasMany
+            |--------------------------------------------------------------------------
+            */
+                case $relation instanceof HasOne:
+                case $relation instanceof HasMany:
+
+                    $attributes[$relation->getForeignKeyName()] = $parent->getKey();
+
+                    break;
+
+                    /*
+            |--------------------------------------------------------------------------
+            | MorphOne / MorphMany
+            |--------------------------------------------------------------------------
+            */
+                case $relation instanceof MorphOne:
+                case $relation instanceof MorphMany:
+
+                    $attributes[$relation->getForeignKeyName()] = $parent->getKey();
+
+                    $attributes[$relation->getMorphType()] = $parent->getMorphClass();
+
+                    break;
             }
 
             $record = $this->seedRow(
@@ -204,13 +300,7 @@ class JsonSeedThruModel extends Seeder
                 )
             );
 
-            /*
-             |--------------------------------------------------------------------------
-             | BelongsToMany
-             |--------------------------------------------------------------------------
-             */
             if ($relation instanceof BelongsToMany) {
-
                 $relation->syncWithoutDetaching([
                     $record->getKey(),
                 ]);
