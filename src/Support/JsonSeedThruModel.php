@@ -116,7 +116,7 @@ class JsonSeedThruModel extends Seeder
 
                 // $this->command?->warn("Done: {$file->getFilename()}");
                 $this->command?->warn(sprintf(
-                    'Done: %d -> Rows=%d Created=%d Updated=%d Skipped=%d',
+                    'Done: %s -> Rows=%d Created=%d Updated=%d Skipped=%d',
                     $file->getFilename(),
                     $this->totalCount - $beforeTotal,
                     $this->createdCount - $beforeCreated,
@@ -155,9 +155,7 @@ class JsonSeedThruModel extends Seeder
             $attributes
         );
 
-        $uniqueBy = $this->guessUniqueBy(
-            $model
-        );
+        $uniqueBy = $this->guessUniqueBy($model);
 
         /*
     |--------------------------------------------------------------------------
