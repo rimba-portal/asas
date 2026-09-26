@@ -156,8 +156,7 @@ class JsonSeedThruModel extends Seeder
         );
 
         $uniqueBy = $this->guessUniqueBy(
-            $model,
-            $attributes
+            $model
         );
 
         /*
@@ -281,7 +280,7 @@ class JsonSeedThruModel extends Seeder
 
                     break;
 
-                /*
+                    /*
             |--------------------------------------------------------------------------
             | MorphOne / MorphMany
             |--------------------------------------------------------------------------
@@ -354,7 +353,7 @@ class JsonSeedThruModel extends Seeder
         }
     }
 
-    protected function guessUniqueBy(
+    protected static function guessUniqueBy(
         Model $model,
         array $attributes
     ): array {
@@ -384,7 +383,7 @@ class JsonSeedThruModel extends Seeder
 
                 return collect($columns)
                     ->mapWithKeys(
-                        fn($column): array => [
+                        fn ($column): array => [
                             $column => $attributes[$column],
                         ]
                     )
