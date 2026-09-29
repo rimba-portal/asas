@@ -155,8 +155,10 @@ class JsonSeedThruModel extends Seeder
             $attributes
         );
 
-        $uniqueBy = $this->guessUniqueBy(
-            $model
+        $uniqueBy = $this->guessUnique(
+            $model,
+            $attributes
+
         );
 
         /*
@@ -353,7 +355,7 @@ class JsonSeedThruModel extends Seeder
         }
     }
 
-    protected static function guessUniqueBy(
+    protected static function guessUnique(
         Model $model,
         array $attributes
     ): array {
