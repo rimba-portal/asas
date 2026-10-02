@@ -13,9 +13,6 @@ use Illuminate\Support\Facades\File;
 #[Signature('rimba:quick-md {folder : The path to the folder}')]
 class QuickMdPkg extends Command
 {
-    /**
-     * Execute the console command.
-     */
     public function handle(): int
     {
         $folder = $this->argument('folder');
@@ -29,8 +26,9 @@ class QuickMdPkg extends Command
         }
 
         $directories = File::directories($rootPath);
-        dd(config('app.timezone'));
+
         foreach ($directories as $directory) {
+
             $folderName = basename($directory);
 
             $this->info('Processing: '.$folderName);
@@ -42,6 +40,8 @@ class QuickMdPkg extends Command
 
             $count = 0;
 
+            $dependencies = [];
+
             foreach ($files as $file) {
 
                 if ($file->getExtension() !== 'php') {
@@ -52,18 +52,63 @@ class QuickMdPkg extends Command
 
                 $contents = File::get($file->getRealPath());
 
+                preg_match_all(
+                    '/^use\s+([^;]+);/mi',
+                    $contents,
+                    $matches
+                );
+
+                foreach ($matches[1] as $class) {
+
+                    $class = trim($class);
+
+                    // Exclude framework dependencies
+                    if (
+                        str_starts_with($class, 'Illuminate\\') ||
+                        str_starts_with($class, 'Filament\\')
+                    ) {
+                        continue;
+                    }
+
+                    // Convert class to package root
+                    $parts = explode('\\', $class);
+
+                    if (count($parts) < 2) {
+                        continue;
+                    }
+
+                    $dependencies[] = $parts[0].'\\'.$parts[1];
+                }
+
                 $markdown .= "## {$file->getRelativePathname()}\n\n";
                 $markdown .= "```php\n";
                 $markdown .= $contents;
                 $markdown .= "\n```\n\n";
             }
 
+            $dependencies = array_values(
+                array_unique($dependencies)
+            );
+
+            sort($dependencies);
+
+            $markdown .= "\n---\n\n";
+            $markdown .= "# Dependencies\n\n";
+            $markdown .= "```php\n";
+            $markdown .= var_export($dependencies, true);
+            $markdown .= "\n```\n";
+
             $outputFile = $rootPath.DIRECTORY_SEPARATOR.'quick_'.$folderName.'.md';
 
             File::put($outputFile, $markdown);
 
             $this->comment(
-                sprintf('Saved %d files to quick_%s.md', $count, $folderName)
+                sprintf(
+                    'Saved %d files to quick_%s.md (%d dependencies)',
+                    $count,
+                    $folderName,
+                    count($dependencies)
+                )
             );
         }
 
