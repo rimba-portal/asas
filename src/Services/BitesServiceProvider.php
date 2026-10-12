@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Rimba\Base\Services;
 
 use BladeUI\Icons\Factory;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\ServiceProvider;
 use ReflectionClass;
 
@@ -45,6 +46,12 @@ abstract class BitesServiceProvider extends ServiceProvider
      */
     protected string $iconPrefix = 'bites';
 
+    /*
+    |--------------------------------------------------------------------------
+    | Registration
+    |--------------------------------------------------------------------------
+    */
+
     public function register(): void
     {
         $this->registerConfig();
@@ -54,14 +61,27 @@ abstract class BitesServiceProvider extends ServiceProvider
         $this->registerPackage();
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Boot
+    |--------------------------------------------------------------------------
+    */
+
     public function boot(): void
     {
+        $this->ensureStorageFilesExist();
+
         $this->registerViews();
         $this->registerIcons();
-        $this->registerHelpFiles();
 
         $this->bootPackage();
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Package Hooks
+    |--------------------------------------------------------------------------
+    */
 
     /**
      * Override this in child providers for package-specific bindings.
@@ -79,88 +99,87 @@ abstract class BitesServiceProvider extends ServiceProvider
         //
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Package Storage
+    |--------------------------------------------------------------------------
+    */
+
     /**
-     * Automatically register help files for publishing if the directory exists.
+     * Ensure files supplied by the package exist in the application's
+     * storage/app tree.
+     *
+     * Expected package structure:
+     *
+     * storage/
+     * ├── private/
+     * │   ├── help/
+     * │   ├── api/
+     * │   └── seed/
+     * │       └── pending/
+     * │
+     * └── public/
+     *     ├── branding/
+     *     └── images/
+     *
+     * Existing application files are never overwritten.
      */
-    protected function registerHelpFiles(): void
+    protected function ensureStorageFilesExist(): void
     {
-        if (! $this->app->runningInConsole()) {
+        $source = $this->packagePath('storage');
+        if (! File::isDirectory($source)) {
             return;
         }
 
-        // Get the directory of the actual child class, not this abstract class
-        $childDir = dirname((new ReflectionClass($this))->getFileName());
-        $helpPath = $childDir.'/../help';
+        foreach (File::allFiles($source) as $file) {
+            $relativePath = $file->getRelativePathname();
+            $target = storage_path(
+                $relativePath
+            );
+            if (File::exists($target)) {
+                continue;
+            }
 
-        if (! is_dir($helpPath)) {
-            return;
+            File::ensureDirectoryExists(dirname($target));
+            File::copy($file->getRealPath(), $target);
         }
-
-        // Publishes package/help/* content directly into public/helpfiles/
-        // Uses the child class's base name as a tag modifier for granular control
-        $tagName = 'bites-help-'.strtolower((new ReflectionClass($this))->getShortName());
-
-        $this->publishes([
-            $helpPath => public_path('helpfiles'),
-        ], ['bites-helpfiles', $tagName]);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Configuration
+    |--------------------------------------------------------------------------
+    */
 
     protected function registerConfig(): void
     {
-        if (
-            $this->configFile === ''
-            || ! file_exists($this->configFile)
-        ) {
+        if ($this->configFile === '' || ! file_exists($this->configFile)) {
             return;
         }
 
         $packageConfig = require $this->configFile;
-
         if (! is_array($packageConfig)) {
             return;
         }
 
-        config([
-            $this->configName => array_replace_recursive(
-                config($this->configName, []),
-                $packageConfig,
-            ),
-        ]);
+        config([$this->configName => array_replace_recursive(config($this->configName, []), $packageConfig)]);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Views
+    |--------------------------------------------------------------------------
+    */
 
     protected function registerViewPath(): void
     {
-        if (
-            $this->viewsPath === ''
-            || ! is_dir($this->viewsPath)
-        ) {
+        if ($this->viewsPath === '' || ! is_dir($this->viewsPath)) {
             return;
         }
 
         app()->instance(
             'bites.views',
-            $this->appendUniquePath(
-                $this->getViewPaths(),
-                $this->viewsPath,
-            )
-        );
-    }
-
-    protected function registerIconPath(): void
-    {
-        if (
-            $this->iconsPath === ''
-            || ! is_dir($this->iconsPath)
-        ) {
-            return;
-        }
-
-        app()->instance(
-            'bites.icons',
-            $this->appendUniquePath(
-                $this->getIconPaths(),
-                $this->iconsPath,
-            )
+            $this->appendUniquePath($this->getViewPaths(), $this->viewsPath)
         );
     }
 
@@ -171,38 +190,9 @@ abstract class BitesServiceProvider extends ServiceProvider
         }
 
         app()->instance('bites.views.registered', true);
-
         foreach ($this->getViewPaths() as $path) {
             $this->loadViewsFrom($path, $this->viewNamespace);
         }
-    }
-
-    protected function registerIcons(): void
-    {
-        if ($this->getIconPaths() === []) {
-            return;
-        }
-
-        $this->callAfterResolving(
-            Factory::class,
-            function (Factory $factory): void {
-                $this->addIconSet($factory);
-            }
-        );
-    }
-
-    protected function addIconSet(Factory $factory): void
-    {
-        if (app()->bound('bites.icons.registered')) {
-            return;
-        }
-
-        app()->instance('bites.icons.registered', true);
-
-        $factory->add($this->iconSet, [
-            'paths' => $this->getIconPaths(),
-            'prefix' => $this->iconPrefix,
-        ]);
     }
 
     protected function getViewPaths(): array
@@ -214,6 +204,48 @@ abstract class BitesServiceProvider extends ServiceProvider
         return app('bites.views');
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Icons
+    |--------------------------------------------------------------------------
+    */
+
+    protected function registerIconPath(): void
+    {
+        if ($this->iconsPath === '' || ! is_dir($this->iconsPath)) {
+            return;
+        }
+
+        app()->instance('bites.icons', $this->appendUniquePath($this->getIconPaths(), $this->iconsPath));
+    }
+
+    protected function registerIcons(): void
+    {
+        if ($this->getIconPaths() === []) {
+            return;
+        }
+
+        $this->callAfterResolving(Factory::class, function (Factory $factory): void {
+            $this->addIconSet($factory);
+        });
+    }
+
+    protected function addIconSet(Factory $factory): void
+    {
+        if (app()->bound('bites.icons.registered')) {
+            return;
+        }
+
+        app()->instance('bites.icons.registered', true);
+        $factory->add(
+            $this->iconSet,
+            [
+                'paths' => $this->getIconPaths(),
+                'prefix' => $this->iconPrefix,
+            ]
+        );
+    }
+
     protected function getIconPaths(): array
     {
         if (! app()->bound('bites.icons')) {
@@ -223,6 +255,26 @@ abstract class BitesServiceProvider extends ServiceProvider
         return app('bites.icons');
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Package Utilities
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Resolve a path relative to the child package.
+     */
+    protected function packagePath(string $path = ''): string
+    {
+        $providerFile = (new ReflectionClass($this))->getFileName();
+        $packageRoot = dirname($providerFile).'/..';
+
+        return $path === '' ? $packageRoot : $packageRoot.'/'.$path;
+    }
+
+    /**
+     * Append a path without introducing duplicates.
+     */
     protected function appendUniquePath(array $paths, string $path): array
     {
         $paths[] = $path;
