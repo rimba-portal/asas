@@ -14,6 +14,8 @@ class BaseServiceProvider extends BitesServiceProvider
 
     protected string $viewsPath = __DIR__.'/../resources/views';
 
+    protected string $iconsPath = __DIR__.'/../resources/svg';
+
     protected function bootPackage(): void
     {
         if ($this->app->runningInConsole()) {
