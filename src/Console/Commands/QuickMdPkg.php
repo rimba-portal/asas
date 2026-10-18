@@ -28,7 +28,6 @@ class QuickMdPkg extends Command
         $directories = File::directories($rootPath);
 
         foreach ($directories as $directory) {
-
             $folderName = basename($directory);
 
             $this->info('Processing: '.$folderName);
@@ -42,8 +41,17 @@ class QuickMdPkg extends Command
 
             $dependencies = [];
 
-            foreach ($files as $file) {
+            /*
+             * Current Rimba package namespace.
+             *
+             * Example:
+             *   Base  -> Rimba\Base
+             *   Kerja -> Rimba\Kerja
+             *   Jawat -> Rimba\Jawat
+             */
+            $packageRoot = 'Rimba\\'.$folderName;
 
+            foreach ($files as $file) {
                 if ($file->getExtension() !== 'php') {
                     continue;
                 }
@@ -52,6 +60,13 @@ class QuickMdPkg extends Command
 
                 $contents = File::get($file->getRealPath());
 
+                /*
+                 * Extract imported classes.
+                 *
+                 * Example:
+                 * use Rimba\Jawat\Models\JobRole;
+                 * use Illuminate\Support\Collection;
+                 */
                 preg_match_all(
                     '/^use\s+([^;]+);/mi',
                     $contents,
@@ -59,10 +74,11 @@ class QuickMdPkg extends Command
                 );
 
                 foreach ($matches[1] as $class) {
-
                     $class = trim($class);
 
-                    // Exclude framework dependencies
+                    /*
+                     * Exclude framework dependencies.
+                     */
                     if (
                         str_starts_with($class, 'Illuminate\\') ||
                         str_starts_with($class, 'Filament\\')
@@ -70,14 +86,35 @@ class QuickMdPkg extends Command
                         continue;
                     }
 
-                    // Convert class to package root
+                    /*
+                     * Convert imported class to its package root.
+                     *
+                     * Example:
+                     * Rimba\Jawat\Models\JobRole
+                     *
+                     * becomes:
+                     * Rimba\Jawat
+                     */
                     $parts = explode('\\', $class);
 
                     if (count($parts) < 2) {
                         continue;
                     }
 
-                    $dependencies[] = $parts[0].'\\'.$parts[1];
+                    $dependency = $parts[0].'\\'.$parts[1];
+
+                    /*
+                     * Exclude references to the package itself.
+                     *
+                     * Example:
+                     * While processing Rimba\Kerja,
+                     * Rimba\Kerja\Models\Flow is not a dependency.
+                     */
+                    if ($dependency === $packageRoot) {
+                        continue;
+                    }
+
+                    $dependencies[] = $dependency;
                 }
 
                 $markdown .= "## {$file->getRelativePathname()}\n\n";
@@ -86,6 +123,10 @@ class QuickMdPkg extends Command
                 $markdown .= "\n```\n\n";
             }
 
+            /*
+             * Remove duplicate dependencies and sort them
+             * so the output remains deterministic.
+             */
             $dependencies = array_values(
                 array_unique($dependencies)
             );
@@ -98,7 +139,11 @@ class QuickMdPkg extends Command
             $markdown .= var_export($dependencies, true);
             $markdown .= "\n```\n";
 
-            $outputFile = $rootPath.DIRECTORY_SEPARATOR.'quick_'.$folderName.'.md';
+            $outputFile = $rootPath
+                .DIRECTORY_SEPARATOR
+                .'quick_'
+                .$folderName
+                .'.md';
 
             File::put($outputFile, $markdown);
 
