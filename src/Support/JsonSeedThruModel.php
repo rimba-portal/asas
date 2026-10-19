@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
+use Rimba\Base\Contracts\AfterJsonSeed;
 use Rimba\Base\Services\GetModelInfo;
 
 class JsonSeedThruModel extends Seeder
@@ -138,7 +139,7 @@ class JsonSeedThruModel extends Seeder
         string $modelClass,
         array $row
     ): Model {
-
+        $payload = $row;
         /** @var Model $model */
         $model = new $modelClass;
 
@@ -230,6 +231,10 @@ class JsonSeedThruModel extends Seeder
                 $relationName,
                 $items
             );
+        }
+
+        if ($record instanceof AfterJsonSeed) {
+            $record->afterJsonSeed($payload);
         }
 
         return $record;
