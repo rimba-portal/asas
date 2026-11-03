@@ -9,7 +9,7 @@ return [
         base_path('rimba'),
         base_path('vendor/rimba'),
         base_path('vendor/bit-es'),
-
+        base_path('vendor/packstub'),
         base_path('vendor/spatie'),
     ],
 ];
