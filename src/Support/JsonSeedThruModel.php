@@ -12,8 +12,10 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Rimba\Base\Contracts\AfterJsonSeed;
 use Rimba\Base\Services\GetModelInfo;
 
@@ -406,34 +408,60 @@ class JsonSeedThruModel extends Seeder
         array $attributes
     ): array {
 
-        if (! method_exists(
-            $model,
-            'seedMappings'
-        )) {
-            return $attributes;
+        // 1. Handle explicit, static model-defined mappings first
+        if (method_exists($model, 'seedMappings')) {
+            $mappings = $model::seedMappings();
+
+            foreach ($mappings as $key => $resolver) {
+                if (! array_key_exists($key, $attributes)) {
+                    continue;
+                }
+
+                $value = $attributes[$key];
+                unset($attributes[$key]);
+
+                $attributes = array_merge(
+                    $attributes,
+                    $resolver($value)
+                );
+            }
         }
 
-        $mappings = $model::seedMappings();
+        // 2. Handle dynamic lookups (e.g., "course_@code" or "learning_module_@code")
+        foreach ($attributes as $key => $value) {
+            // Match pattern: "{relation_name}_@__{lookup_column}"
+            if (preg_match('/^([a-zA-Z0-9_]+)_@([a-zA-Z0-9_]+)$/', $key, $matches)) {
+                $relationName = Str::camel($matches[1]); // e.g., "course" or "learningModule"
+                $lookupColumn = $matches[2];                                 // e.g., "code"
 
-        foreach ($mappings as $key => $resolver) {
+                // Verify if the relation method exists on the model
+                if (method_exists($model, $relationName)) {
+                    try {
+                        $relation = $model->{$relationName}();
 
-            if (
-                ! array_key_exists(
-                    $key,
-                    $attributes
-                )
-            ) {
-                continue;
+                        // Extract target table, foreign key, and related primary key directly from the relationship
+                        $relatedModel = $relation->getRelated();
+                        $tableName = $relatedModel->getTable();         // e.g., "kn_courses"
+                        $ownerKey = $relatedModel->getKeyName();       // e.g., "id"
+                        $foreignKey = $relation->getForeignKeyName();    // e.g., "course_id" or "learning_module_id"
+
+                        // Query using the precise table prefix configuration
+                        $resolvedId = DB::table($tableName)
+                            ->where($lookupColumn, $value)
+                            ->value($ownerKey);
+
+                        // If a matching record is found, assign its UUID or ID
+                        if ($resolvedId !== null) {
+                            $attributes[$foreignKey] = $resolvedId;
+                        }
+                    } catch (\Throwable $e) {
+                        // Fail gracefully if method is not a valid relation type
+                    }
+                }
+
+                // Always clean up the payload key so it doesn't break table injection
+                unset($attributes[$key]);
             }
-
-            $value = $attributes[$key];
-
-            unset($attributes[$key]);
-
-            $attributes = array_merge(
-                $attributes,
-                $resolver($value)
-            );
         }
 
         return $attributes;
