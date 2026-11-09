@@ -111,16 +111,18 @@ abstract class BitesServiceProvider extends ServiceProvider
      *
      * Expected package structure:
      *
-     * storage/
+     * storage/app/
      * ├── private/
-     * │   ├── help/
+     * │   ├── help/                ## Help Files rendered by Filament
      * │   ├── api/
-     * │   └── seed/
-     * │       └── pending/
+     * │   ├── documents/           ## Controlled files rendered by Filament
+     * │   ├── feed/                ## Data served through application directly, not seeded into database
+     * │   └── seed/                ## Data to seed into database
+     * │       └── processed/       ## Archive/audit
      * │
      * └── public/
-     *     ├── branding/
-     *     └── images/
+     *     ├── branding/            ## Front end assets to customize view
+     *     └── images/              ## Directly rendered in Filament
      *
      * Existing application files are never overwritten.
      */
